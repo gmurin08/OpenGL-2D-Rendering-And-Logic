@@ -15,7 +15,7 @@ The code for the game centers on two main object types:
 Each object has unique states and behaviors:
 * Ball objects have unique x and y coordinates as well as horizontal and vertical rate of travel that are updated after  collisions. 
 
-* Brick objects are either reflective or destructable.
+* Brick objects are either reflective or destructable. Balls will bounce of any brick, but only certain bricks should be able to 'break' or be removed from the screen. 
 
 All objects are stored in vectors that update as the number of objects increase/decrease. For example, if the ball object array reaches zero, the player has lost and the game ends. If the brick object array reaches zero the player has destroyed all the bricks and won the game. 
 
