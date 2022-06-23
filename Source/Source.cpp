@@ -8,227 +8,26 @@
 #include <windows.h>
 #include <time.h>
 
+
 using namespace std;
-
 const float DEG2RAD = 3.14159 / 180;
-
-
-
 enum BRICKTYPE { REFLECTIVE, DESTRUCTABLE };
 enum ONOFF { ON, OFF };
+#include "Brick.h"
+#include "Circle.h"
 
-
-class Brick
-{
-public:
-	float red, green, blue;
-	float x, y, width;
-	vector<float> coords;
-	
-	BRICKTYPE brick_type;
-	ONOFF onoff;
-
-	//Default constructor
-	Brick(BRICKTYPE bt, float xx, float yy, float ww, float rr, float gg, float bb)
-	{
-		brick_type = bt; x = xx; y = yy, width = ww; red = rr, green = gg, blue = bb;
-		onoff = ON;
-	};
-
-	//Overloaded constructor to faciliate raw coordinates
-	Brick(BRICKTYPE bt, vector<float> c_coords, float rr, float gg, float bb) {
-		brick_type = bt, coords = c_coords, red = rr, green = gg, blue = bb;
-		onoff = ON;
-	}
-
-
-	//Render bricks
-	void drawBrick()
-	{
-		//If brick is active
-		if (onoff == ON)
-		{
-			//define variables to augment the shape of bricks into rectangle
-			double halfside = width / 2;
-			double longside = width * 2;
-
-			glColor3d(red, green, blue);
-			glBegin(GL_POLYGON);
-
-			glVertex2d(x + longside, y + halfside);
-			glVertex2d(x + longside, y - halfside);
-			glVertex2d(x - longside, y - halfside);
-			glVertex2d(x - longside, y + halfside);
-
-			glEnd();
-		}
-	}
-
-	void drawBrickCoords() {
-		//If brick is active
-		if (onoff == ON)
-		{
-			//define variables to augment the shape of bricks into rectangle
-			double halfside = width / 2;
-			double longside = width * 2;
-
-			glColor3d(red, green, blue);
-			glBegin(GL_POLYGON);
-
-			glVertex2d(coords.at(0), coords.at(1));   //Top right
-			glVertex2d(coords.at(2), coords.at(3));   //Bottom right
-			glVertex2d(coords.at(4), coords.at(5));   //Bottom left
-			glVertex2d(coords.at(6), coords.at(7));   //Top left
-
-			glEnd();
-		}
-
-	}
-
-	void drawPaddle(){
-		//If brick is active
-		if (onoff == ON)
-		{
-			//define variables to augment the shape of bricks into rectangle
-			double halfside = width / 1.5;
-			double longside = width * 1.5;
-
-			glColor3d(red, green, blue);
-			glBegin(GL_POLYGON);
-
-			glVertex2d(x + longside, y + halfside);
-			glVertex2d(x + longside, y - halfside);
-			glVertex2d(x - longside, y - halfside);
-			glVertex2d(x - longside, y + halfside);
-
-			glEnd();
-		}
-	}
-
-	void movePaddle(Brick *paddle, int direction) {
-		if (direction == 1) {
-			paddle->x += 0.001;
-		}
-		if (direction == -1) {
-			paddle->x += 0.001;
-		}
-	}
-};
-
-void p_processInput(GLFWwindow* window, Brick* paddlePos);
-void welcomeMessage();
+void processInput(GLFWwindow* window, Brick* paddlePos);
+void displayWelcomeMessage();
 void handleMovement(Brick paddle);
 void createBrickGrid(int rows, int cols);
 
-class Circle
-{
-public:
-	float red, green, blue, radius, x, y, speed = 0.03;
-	int direction; // 1=up 2=right 3=down 4=left 5 = up right   6 = up left  7 = down right  8= down left
-	float x_travel = 0.0, y_travel = 0.0;
-
-	Circle(float xx, float yy, double rr, int dir, float rad, float r, float g, float b)
-	{
-		x = xx;
-		y = yy;
-		radius = rr;
-		red = r;
-		green = g;
-		blue = b;
-		radius = rad;
-		direction = dir;
-	}
-
-	int CheckCollision(Brick* brk)
-	{
-		if (brk->brick_type == REFLECTIVE)
-		{
-			if ((x > brk->x - brk->width && x <= brk->x + brk->width) && (y > brk->y - brk->width && y <= brk->y + brk->width))
-			{
-				y_travel = -y_travel;
-			}
-		}
-		else if (brk->brick_type == DESTRUCTABLE)
-		{
-			if ((x >= brk->coords[6] && x <= brk->coords[2]) && (y <= brk->coords[3] && y >= brk->coords[1])) {
-				brk->onoff = OFF;
-				x_travel = -x_travel;
-				y_travel = -y_travel;
-				return 1;
-			}
-		}
-
-		return 0;
-	}
-
-	//used at startup to randomize movement
-	int GetRandomDirection()
-	{
-		return (rand() % 8) + 1;
-	}
-
-	//Moves Circle object one step in a given direction
-	int Move() {
-		int flag=0;
-		//IF velocity is at 0 (newly initialized)
-		if (x_travel == 0 && y_travel == 0) {
-			//Set a starting speed and trajectory
-
-			//Randomize horizontal trajectory
-			if (rand() % 2) {
-				x_travel = 0.02;
-			}
-			else {
-				x_travel = -0.02;
-			}
-			
-			y_travel = 0.02;
-		}
-
-		//IF we reach left or right edge of screen
-		if (x >= 0.99 || x <= -0.99) {
-			//Invert our horizontal trajectory to 'bounce off the wall'
-			x_travel = -x_travel;
-		}
-
-		//IF we hit the top of the screen
-		if (y >= 0.99) {
-			//Invert vertical trajectory to "bounce"
-			y_travel = -y_travel;
-			
-		}
-
-		//IF our ball goes out of bounds along bottom of screen
-		if (y <= 0.99) {
-			//Flag for removal
-			flag = 1;
-		}
-
-		//Increment final current trajectory by 1
-		x += x_travel;
-		y += y_travel;
-
-		return flag;
-	}
-
-	void DrawCircle()
-	{
-		glColor3f(red, green, blue);
-		glBegin(GL_POLYGON);
-		for (int i = 0; i < 360; i++) {
-			float degInRad = i * DEG2RAD;
-			glVertex2f((cos(degInRad) * radius) + x, (sin(degInRad) * radius) + y);
-		}
-		glEnd();
-	}
-};
-
-//Vector of circles generated
-vector<Circle> world;
-//Vector of brick objects for ease of iteration
+//Object vectors to hold circle and brick objects
+vector<Circle> ballVec;
 vector<Brick> brickVec;
 
 int main(void) {
+
+	//Window Initialization
 	srand(time(NULL));
 	int cycle = 0;
 	if (!glfwInit()) {
@@ -244,15 +43,18 @@ int main(void) {
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 
-	Brick paddle(REFLECTIVE, 0.0, -1.1, 0.2, 1.0, 1.0, 1.0);
-	
 	//Build an array of brick objects and render onto screen
 	createBrickGrid(10, 5);
-	Circle B(0, -0.8, 02, 2, 0.05, 1, 1, 0);
-	world.push_back(B);
 
+	//Generate objects for ball and paddle
+	Brick paddle(REFLECTIVE, 0.0, -1.1, 0.2, 1.0, 1.0, 1.0);
+	Circle B(0, -0.8, 02, 2, 0.05, 1, 1, 0);
+	ballVec.push_back(B);
+
+	//Main loop
 	while (!glfwWindowShouldClose(window)) {
-		//Setup View
+
+		//Setup view
 		float ratio;
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
@@ -260,31 +62,38 @@ int main(void) {
 		glViewport(0, 0, width, height);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		p_processInput(window, &paddle);
+		//check position of objects in the view
+		processInput(window, &paddle);
+
+		//Populate brick vector to keep score
 		for (int i = 0; i < brickVec.size(); i++) {
 			brickVec.at(i).drawBrickCoords();
 		}
 
-		paddle.drawPaddle();
-
+		//IF its the first iteration of the loop show welcome popup
 		if (cycle == 1) {
-			welcomeMessage();
+			displayWelcomeMessage();
 		}
 
+		//Draw paddle and take int new coords for next draw
+		paddle.drawPaddle();
 		handleMovement(paddle);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		//IF the player wins or loses show a message
 		if (brickVec.size() < 1) {
 			MessageBoxA(NULL, "You WON!!!", "Congratulations!", MB_ICONASTERISK | MB_OK);
 			break;
 		}
-
-		if (world.size() < 1) {
-			MessageBoxA(NULL, "***********************\n You Ran Out of Balls!\n\n GAME OVER!\n*********************** \n\n", "Oops!", MB_ICONASTERISK | MB_OK);
+		if (ballVec.size() < 1) {
+			MessageBoxA(NULL, "***********************\n You Ran Out of Balls!\n\n "
+				"GAME OVER!\n * **********************\n\n", "Oops!", MB_ICONASTERISK | MB_OK);
 			break;
 		}
 
+		//Iterate cycle
 		cycle++;
 	}
 
@@ -343,7 +152,7 @@ void createBrickGrid(int rows, int cols)
 	}
 }
 
-void welcomeMessage() {
+void displayWelcomeMessage() {
 
 	MessageBoxA(NULL, "-Press 'A' to move the paddle left\n-Press 'D' to move the paddle right."
 		"\n\nTry to get all the bricks before you lose your ball!", "Welcome To Brick Breaker!", MB_ICONASTERISK | MB_OK);
@@ -352,28 +161,26 @@ void welcomeMessage() {
 
 void handleMovement(Brick paddle) {
 	//Movement
-	for (int i = 0; i < world.size(); i++)
+	for (int i = 0; i < ballVec.size(); i++)
 	{
-		world[i].CheckCollision(&paddle);
+		ballVec[i].CheckCollision(&paddle);
 		for (int j = 0; j < brickVec.size(); j++) {
-			if (world[i].CheckCollision(&brickVec.at(j))) {
+			if (ballVec[i].CheckCollision(&brickVec.at(j))) {
 				brickVec.erase(brickVec.begin() + j);
 			}
 		}
-		world[i].Move();
-		world[i].DrawCircle();
-		if (world[i].y < -0.99) {
-			world.erase(world.begin() + i);
+		ballVec[i].Move();
+		ballVec[i].DrawCircle();
+		if (ballVec[i].y < -0.99) {
+			ballVec.erase(ballVec.begin() + i);
 		}
 	}
 }
 
-void p_processInput(GLFWwindow* window, Brick* paddlePos)
+void processInput(GLFWwindow* window, Brick* paddlePos)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-
-
 
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 	{
@@ -382,7 +189,7 @@ void p_processInput(GLFWwindow* window, Brick* paddlePos)
 		g = rand() / 10000;
 		b = rand() / 10000;
 		Circle B(0, -0.8, 02, 2, 0.05, r, g, b);
-		world.push_back(B);
+		ballVec.push_back(B);
 		
 	}
 
